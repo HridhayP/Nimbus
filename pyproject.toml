@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nimbus"
+version = "0.1.0"
+description = "A small LLM inference engine: paged KV cache, continuous batching, Triton kernels, speculative decoding, INT8 weights"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.4",
+    "transformers>=4.50",
+    "safetensors",
+    "numpy",
+    "sentencepiece",
+    "fastapi",
+    "uvicorn",
+    "pydantic>=2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "httpx", "openai", "datasets", "accelerate"]
+
+[tool.setuptools.packages.find]
+include = ["nimbus*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "cuda: needs a CUDA GPU (skipped otherwise)",
+    "model: downloads a HuggingFace model",
+]
