@@ -53,9 +53,13 @@ class AsyncEngine:
         self._thread.start()
 
     def shutdown(self) -> None:
+        """Stops the engine thread and releases the engine (and its GPU
+        memory), even if a stopped web app still references this object."""
         self._stopped = True
         self._wake.set()
         self._thread.join(timeout=10)
+        if not self._thread.is_alive():
+            self.engine = None
 
     async def generate(self, prompt: str | list[int], params: SamplingParams, stop: list[str] | None = None):
         """Async iterator of StreamChunks for one request."""
