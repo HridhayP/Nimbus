@@ -118,3 +118,27 @@ def test_engine_batch_matches_hf_on_tinyllama():
         same += hf == o
     # Batched fp16 matmuls may break a near-tie differently from batch-1 HF.
     assert same >= len(prompts) - 1, f"{same}/{len(prompts)} identical"
+
+
+@pytest.mark.cuda
+@pytest.mark.model
+def test_incremental_detokenization_matches_full_decode():
+    """Streamed text deltas must concatenate to the full decode, including
+    SentencePiece leading spaces and characters split across tokens."""
+    from transformers import AutoTokenizer
+
+    tok = AutoTokenizer.from_pretrained(TINYLLAMA)
+    eng = LLMEngine(EngineConfig(max_model_len=512, max_num_seqs=8))
+    prompts = ["Write a sentence in Japanese, then in Hindi, then three emoji.",
+               "List five accented French words like café.", "Count from 1 to 20 separated by spaces."]
+    ids = [tok.apply_chat_template([{"role": "user", "content": p}], add_generation_prompt=True,
+                                   return_dict=True)["input_ids"] for p in prompts]
+    rid = [eng.add_request(i, SamplingParams(max_tokens=80, temperature=0.8, seed=3)) for i in ids]
+    text = {r: "" for r in rid}
+    toks = {r: [] for r in rid}
+    while eng.has_unfinished():
+        for o in eng.step():
+            text[o.seq_id] += o.new_text
+            toks[o.seq_id] += o.new_token_ids
+    for r in rid:
+        assert text[r] == tok.decode(toks[r], skip_special_tokens=True)

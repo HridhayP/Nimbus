@@ -109,7 +109,8 @@ class LLMEngine:
             self.graphs.capture()
             log.info("captured %d decode graphs in %.1fs", len(self.graphs.sizes), time.perf_counter() - tg)
         self.seqs: dict[int, Sequence] = {}
-        self._texts: dict[int, str] = {}
+        # per sequence: (prefix_offset, read_offset) for incremental detokenization
+        self._detok: dict[int, tuple[int, int]] = {}
         self._ids = itertools.count()
         self.stats = EngineStats()
         log.info("engine ready in %.1fs: %d KV blocks (%.2f GiB), triton=%s, quant=%s",
@@ -176,7 +177,7 @@ class LLMEngine:
                              f"max_model_len {self.max_model_len}")
         seq = Sequence(next(self._ids), ids, params, arrival)
         self.seqs[seq.seq_id] = seq
-        self._texts[seq.seq_id] = ""
+        self._detok[seq.seq_id] = (0, 0)
         self.scheduler.add(seq)
         return seq.seq_id
 
@@ -185,7 +186,7 @@ class LLMEngine:
         if seq is not None and not seq.status.finished:
             self.scheduler.finish(seq, SeqStatus.FINISHED_ABORTED)
             self.sampler.forget(seq)
-            self._texts.pop(seq_id, None)
+            self._detok.pop(seq_id, None)
 
     def has_unfinished(self) -> bool:
         return self.scheduler.has_work()
@@ -228,21 +229,35 @@ class LLMEngine:
             reason = SeqStatus.FINISHED_STOPPED
         elif len(seq.output_ids) >= p.max_tokens or len(seq) >= self.max_model_len:
             reason = SeqStatus.FINISHED_LENGTH
-        text = self.tokenizer.decode(seq.output_ids, skip_special_tokens=True)
-        prev = self._texts.get(seq.seq_id, "")
-        # Hold back an incomplete multi-byte character until it resolves.
-        delta = "" if text.endswith("�") else text[len(prev):]
-        if delta:
-            self._texts[seq.seq_id] = text
+        delta = self._detokenize(seq, final=reason is not None)
         if reason is not None:
             seq.finish_time = time.perf_counter()
             self.scheduler.finish(seq, reason)
             self.sampler.forget(seq)
-            delta = text[len(prev):] if not delta else delta
-            self._texts.pop(seq.seq_id, None)
+            self._detok.pop(seq.seq_id, None)
             self.seqs.pop(seq.seq_id, None)
         return RequestOutput(seq.seq_id, [tok], delta, reason is not None,
                              reason.value if reason else None, len(seq.prompt_ids), len(seq.output_ids))
+
+    def _detokenize(self, seq: Sequence, final: bool) -> str:
+        """Text added by the newest token, decoding only a short window.
+
+        Decoding the whole output every step is quadratic in its length.
+        Tokenizers don't decode tokens independently (SentencePiece leading
+        spaces, multi-byte characters split across tokens), so decode the
+        window [prefix_offset, end) and emit what extends the decoding of
+        [prefix_offset, read_offset); an incomplete character (U+FFFD) waits
+        for the next token unless the sequence is finishing.
+        """
+        ids = seq.output_ids
+        prefix_off, read_off = self._detok[seq.seq_id]
+        dec = self.tokenizer.decode
+        prefix = dec(ids[prefix_off:read_off], skip_special_tokens=True)
+        new = dec(ids[prefix_off:], skip_special_tokens=True)
+        if len(new) > len(prefix) and (final or not new.endswith("�")):
+            self._detok[seq.seq_id] = (read_off, len(ids))
+            return new[len(prefix):]
+        return ""
 
     # ---- offline convenience ----
 
