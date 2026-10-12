@@ -30,7 +30,7 @@ done
 
 # Speculative decoding (batch 1)
 run bench/speculative.py --plain
-for d in JackFram/llama-160m JackFram/llama-68m; do
+for d in ${NIMBUS_DRAFTS:-JackFram/llama-160m JackFram/llama-68m}; do
   for k in 2 4 6; do run bench/speculative.py --draft $d --k $k; done
 done
 

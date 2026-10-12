@@ -11,8 +11,10 @@ import time
 
 import torch
 
-MODEL = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-RESULTS = os.path.join(os.path.dirname(__file__), "..", "results")
+# Override with NIMBUS_MODEL (e.g. meta-llama/Meta-Llama-3-8B-Instruct on an
+# A100) and NIMBUS_RESULTS to keep runs on different hardware apart.
+MODEL = os.environ.get("NIMBUS_MODEL", "TinyLlama/TinyLlama-1.1B-Chat-v1.0")
+RESULTS = os.environ.get("NIMBUS_RESULTS", os.path.join(os.path.dirname(__file__), "..", "results"))
 
 
 def env_info() -> dict:
