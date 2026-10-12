@@ -45,7 +45,7 @@ class DecodeGraphs:
         self.tables = torch.full((max_batch, width), scratch_block, dtype=torch.int32, device=device)
         self._host = torch.empty((4, max_batch), dtype=torch.int64, pin_memory=True)
         self._host_tables = torch.empty((max_batch, width), dtype=torch.int32, pin_memory=True)
-        self.graphs: dict[int, tuple[torch.cuda.CUDAGraph, torch.Tensor]] = {}
+        self.graphs: dict[int, tuple[torch.cuda.CUDAGraph, torch.Tensor, AttnMetadata]] = {}
         self.kv_heads = num_kv_heads
         self.device = device
 
@@ -74,7 +74,8 @@ class DecodeGraphs:
             g = torch.cuda.CUDAGraph()
             with torch.cuda.graph(g, pool=pool):
                 logits = self.model.logits(self.model(*args))
-            self.graphs[b] = (g, logits)
+            # Keep meta's tensors alive for as long as the graph can replay.
+            self.graphs[b] = (g, logits, meta)
         torch.cuda.synchronize()
 
     def can_run(self, batch: list[tuple[Sequence, int]]) -> bool:
@@ -84,6 +85,39 @@ class DecodeGraphs:
     @torch.inference_mode()
     def run(self, seqs: list[Sequence]) -> torch.Tensor:
         """Runs one decode step for seqs; returns their logits [len(seqs), vocab]."""
+        g, logits, _ = self.graphs[self._load(seqs)]
+        g.replay()
+        return logits[: len(seqs)]
+
+    @torch.inference_mode()
+    def greedy_chain(self, seqs: list[Sequence], steps: int) -> torch.Tensor:
+        """Runs `steps` greedy decode steps without returning to the host:
+        each step's argmax becomes the next step's input on the GPU, and
+        positions, slots and context lengths advance on the GPU too. The
+        caller must have grown every block table by `steps` tokens.
+        Returns the chosen tokens [len(seqs), steps]."""
+        n = len(seqs)
+        b = self._load(seqs)
+        g, logits, _ = self.graphs[b]
+        rows = torch.arange(b, device=self.device)
+        out = []
+        for i in range(steps):
+            g.replay()
+            tok = logits.argmax(-1)  # [b]
+            out.append(tok[:n])
+            if i + 1 == steps:
+                break
+            self.input_ids[:b].copy_(tok)
+            self.positions[:n] += 1
+            self.ctx[:n] += 1
+            pos = self.positions[:n]
+            page = self.tables[rows[:n], pos // self.block_size].long()
+            self.slots[:n] = page * self.block_size + pos % self.block_size
+        return torch.stack(out, dim=1)
+
+    def _load(self, seqs: list[Sequence]) -> int:
+        """Copies seqs' next-token inputs into the static buffers; returns
+        the captured batch size used."""
         n = len(seqs)
         b = self.sizes[bisect.bisect_left(self.sizes, n)]
         bs = self.block_size
@@ -107,6 +141,4 @@ class DecodeGraphs:
         self.slots[:b].copy_(h[2, :b], non_blocking=True)
         self.ctx[:b].copy_(h[3, :b], non_blocking=True)
         self.tables[:b].copy_(ht[:b], non_blocking=True)
-        g, logits = self.graphs[b]
-        g.replay()
-        return logits[:n]
+        return b
