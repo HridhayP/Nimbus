@@ -44,6 +44,7 @@ def paged_prefill_attention(
     scale: float,
     query_start_host: list[int],
     context_lens_host: list[int],
+    programs=None,  # unused; the Triton kernel's per-step tile table
 ) -> torch.Tensor:
     """Causal attention for sequences whose newest q_len tokens are queries.
 

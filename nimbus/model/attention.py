@@ -36,6 +36,10 @@ class AttnMetadata:
     # Host copies, so the reference path doesn't sync with the GPU
     prefill_query_start_host: list[int]
     prefill_context_lens_host: list[int]
+    # Built lazily by the Triton backend, once per step instead of per layer
+    prefill_programs: tuple[torch.Tensor, torch.Tensor] | None = None
+    # Fixed decode launch grid (set when capturing CUDA graphs)
+    decode_partitions: int | None = None
 
     @property
     def num_prefills(self) -> int:
@@ -56,6 +60,7 @@ class AttentionBackend:
 
             self._decode = paged_attention.paged_decode_attention
             self._prefill = prefill_attention.paged_prefill_attention
+            self._build_programs = prefill_attention.build_programs
         else:
             self._decode = reference.paged_decode_attention
             self._prefill = reference.paged_prefill_attention
@@ -74,14 +79,17 @@ class AttentionBackend:
         out = torch.empty_like(q)
         p = meta.num_prefill_tokens
         if p:
+            if self.use_triton and meta.prefill_programs is None:
+                meta.prefill_programs = self._build_programs(meta.prefill_query_start_host, q.device)
             out[:p] = self._prefill(
                 q[:p], k_cache, v_cache, meta.prefill_query_start, meta.prefill_context_lens,
                 meta.prefill_block_tables, scale, meta.prefill_query_start_host,
-                meta.prefill_context_lens_host,
+                meta.prefill_context_lens_host, meta.prefill_programs,
             )
         if meta.num_decodes:
+            kw = {"num_partitions": meta.decode_partitions} if self.use_triton else {}
             out[p:] = self._decode(
                 q[p:], k_cache, v_cache, meta.decode_context_lens, meta.decode_block_tables,
-                meta.max_decode_context, scale,
+                meta.max_decode_context, scale, **kw,
             )
         return out

@@ -96,5 +96,6 @@ class EngineConfig:
     max_model_len: int | None = None
     quantization: str | None = None  # None or "int8"
     use_triton: bool | None = None  # None: use Triton kernels when CUDA is available
+    enforce_eager: bool = False  # disable CUDA graphs for decode steps
     seed: int = 0
     extra: dict = field(default_factory=dict)

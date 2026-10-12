@@ -91,11 +91,23 @@ class LLMEngine:
         min_blocks = (self.max_model_len + config.block_size - 1) // config.block_size
         if num_blocks < min_blocks:
             raise RuntimeError(f"only {num_blocks} KV blocks fit; one max-length sequence needs {min_blocks}")
-        self.kv = KVCache(self.model_cfg, num_blocks, config.block_size, self.dtype, self.device)
+        use_graphs = use_triton and not config.enforce_eager and self.device == "cuda"
+        # With graphs, one extra block (never handed out) absorbs padding rows.
+        self.kv = KVCache(self.model_cfg, num_blocks + int(use_graphs), config.block_size, self.dtype, self.device)
         self.bm = BlockManager(num_blocks, config.block_size)
         self.scheduler = Scheduler(self.bm, config.max_num_seqs, config.max_num_batched_tokens,
                                    watermark_blocks=max(1, num_blocks // 100))
         self.sampler = Sampler(self.device)
+        self.graphs = None
+        if use_graphs:
+            from nimbus.cuda_graph import DecodeGraphs
+
+            tg = time.perf_counter()
+            self.graphs = DecodeGraphs(self.model, self.kv.layers, config.block_size, self.max_model_len,
+                                       config.max_num_seqs, scratch_block=num_blocks,
+                                       num_kv_heads=self.model_cfg.num_kv_heads, device=self.device)
+            self.graphs.capture()
+            log.info("captured %d decode graphs in %.1fs", len(self.graphs.sizes), time.perf_counter() - tg)
         self.seqs: dict[int, Sequence] = {}
         self._texts: dict[int, str] = {}
         self._ids = itertools.count()
@@ -185,13 +197,18 @@ class LLMEngine:
         self.stats.preemptions += len(sched.preempted)
         if not sched:
             return []
-        step = prepare(sched.batch, self.config.block_size, self.device)
         t0 = time.perf_counter()
-        h = self.model(step.input_ids, step.positions, self.kv.layers, step.meta)
-        logits = self.model.logits(h[step.sample_rows]) if step.sample_seqs else None
+        if self.graphs is not None and self.graphs.can_run(sched.batch):
+            sample_seqs = [s for s, _ in sched.batch]
+            logits = self.graphs.run(sample_seqs)
+        else:
+            step = prepare(sched.batch, self.config.block_size, self.device)
+            h = self.model(step.input_ids, step.positions, self.kv.layers, step.meta)
+            sample_seqs = step.sample_seqs
+            logits = self.model.logits(h[step.sample_rows]) if sample_seqs else None
         for seq, n in sched.batch:
             seq.num_computed += n
-        tokens = self.sampler(logits, step.sample_seqs) if step.sample_seqs else []
+        tokens = self.sampler(logits, sample_seqs) if sample_seqs else []
         self.stats.forward_time += time.perf_counter() - t0
         self.stats.steps += 1
         for seq, n in sched.batch:
@@ -199,7 +216,7 @@ class LLMEngine:
                 self.stats.decode_tokens += 1
             else:
                 self.stats.prefill_tokens += n
-        return [self._emit(seq, tok) for seq, tok in zip(step.sample_seqs, tokens)]
+        return [self._emit(seq, tok) for seq, tok in zip(sample_seqs, tokens)]
 
     def _emit(self, seq: Sequence, tok: int) -> RequestOutput:
         seq.append(tok)
