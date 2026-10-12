@@ -11,7 +11,7 @@ import torch
 
 from nimbus.cache.block_manager import BlockManager
 from nimbus.cache.kv_cache import KVCache
-from nimbus.config import EngineConfig, ModelConfig
+from nimbus.config import EngineConfig
 from nimbus.model.attention import AttentionBackend
 from nimbus.model.weights import load_model
 from nimbus.runner import prepare
@@ -62,6 +62,13 @@ class LLMEngine:
 
             fused_norm = (rmsnorm.rms_norm, rmsnorm.add_rms_norm)
         torch.manual_seed(config.seed)
+        if self.device == "cuda":
+            # Never let PyTorch reserve more than what is physically free:
+            # past that, Windows/WSL pages GPU memory to system RAM instead
+            # of failing, which is far slower than freeing cached blocks.
+            free, total = torch.cuda.mem_get_info()
+            cap = (torch.cuda.memory_reserved() + 0.97 * free) / total
+            torch.cuda.set_per_process_memory_fraction(min(1.0, cap))
         t0 = time.perf_counter()
         self.model, self.model_cfg, path = load_model(
             config.model, self.device, self.dtype, backend, config.max_model_len, fused_norm)
@@ -108,18 +115,30 @@ class LLMEngine:
         torch.cuda.empty_cache()
         torch.cuda.reset_peak_memory_stats()
         base = torch.cuda.memory_allocated()
-        # A full step's worth of prefill tokens, split into sequences no
+        # Worst-case prefill step: a full token budget of prompts, each no
         # longer than max_model_len (positions must stay within RoPE range).
         n = cfg.max_num_batched_tokens
         lens = [min(self.max_model_len, n - i) for i in range(0, n, self.max_model_len)]
         per_seq = [(l + cfg.block_size - 1) // cfg.block_size for l in lens]
-        probe = KVCache(self.model_cfg, sum(per_seq), cfg.block_size, self.dtype, self.device)
+        max_blocks = (self.max_model_len + cfg.block_size - 1) // cfg.block_size
+        probe = KVCache(self.model_cfg, max(sum(per_seq), max_blocks), cfg.block_size, self.dtype, self.device)
         batch, nxt = [], 0
         for i, (l, nb) in enumerate(zip(lens, per_seq)):
             seq = Sequence(-1 - i, [0] * l, SamplingParams())
             seq.block_table = list(range(nxt, nxt + nb))
             nxt += nb
             batch.append((seq, l))
+        step = prepare(batch, cfg.block_size, self.device)
+        h = self.model(step.input_ids, step.positions, probe.layers, step.meta)
+        self.model.logits(h[step.sample_rows])
+        # Worst-case decode step: max_num_seqs sequences at max_model_len.
+        # They all alias the same blocks, which is fine for measuring memory.
+        batch = []
+        for i in range(cfg.max_num_seqs):
+            seq = Sequence(-1000 - i, [0] * self.max_model_len, SamplingParams())
+            seq.block_table = list(range(max_blocks))
+            seq.num_computed = self.max_model_len - 1
+            batch.append((seq, 1))
         step = prepare(batch, cfg.block_size, self.device)
         h = self.model(step.input_ids, step.positions, probe.layers, step.meta)
         self.model.logits(h[step.sample_rows])
