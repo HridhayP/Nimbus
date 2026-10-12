@@ -181,7 +181,7 @@ Every benchmark records GPU, driver, torch/triton versions, command and raw JSON
 - [x] **M4 Triton kernels:** paged decode attention, prefill attention, fused RMSNorm+residual, with correctness tests and micro-benchmarks.
 - [x] **M5 Speculative decoding:** draft runner, verification, rejection sampling, KV rollback; acceptance and speedup measured.
 - [x] **M6 INT8 weight-only:** quantizer plus Triton int8 matmul; perplexity and memory measured.
-- [ ] **M7 Server:** OpenAI-compatible FastAPI with streaming, async engine; tested with the `openai` Python client.
+- [x] **M7 Server:** OpenAI-compatible FastAPI with streaming, async engine; tested with the `openai` Python client.
 - [ ] **M8 Benchmarks:** all of the above vs HF; RESULTS.md; Modal + Colab A100 scripts.
 - [ ] **M9 Docs and ship:** README (Mermaid, quickstart, benchmark table, design decisions), INTERVIEW_NOTES.md, CI green, PR merged.
 
