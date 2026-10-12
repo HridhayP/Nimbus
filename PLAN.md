@@ -175,7 +175,7 @@ Every benchmark records GPU, driver, torch/triton versions, command and raw JSON
 ## Milestones
 
 - [x] **M0 Setup:** WSL env with `uv`, torch + CUDA, triton, transformers, a repo skeleton, CPU CI. Download TinyLlama and the draft model.
-- [ ] **M1 Reference model:** own Llama forward with a plain contiguous KV cache, matching HF greedy output.
+- [x] **M1 Reference model:** own Llama forward with a plain contiguous KV cache, matching HF greedy output.
 - [ ] **M2 Paged KV cache:** block allocator, cache tensors, slot mapping, paged decode attention in PyTorch. Still matches HF.
 - [ ] **M3 Continuous batching:** scheduler, prefill/decode split, chunked prefill, preemption, engine loop, sampler.
 - [ ] **M4 Triton kernels:** paged decode attention, prefill attention, fused RMSNorm+residual, with correctness tests and micro-benchmarks.
