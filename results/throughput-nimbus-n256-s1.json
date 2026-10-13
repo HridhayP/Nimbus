@@ -1,0 +1,39 @@
+{
+  "env": {
+    "time": "2026-10-12T18:27:31",
+    "python": "3.11.15",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "platform": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "triton": "3.6.0",
+    "transformers": "5.19.0",
+    "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "gpu_mem_gib": 6.0,
+    "driver": "610.88"
+  },
+  "benchmark": "throughput",
+  "engine": "nimbus",
+  "requests": 256,
+  "seed": 1,
+  "prompt_tokens": 36800,
+  "output_tokens": 49848,
+  "wall_s": 29.96206912699995,
+  "output_tok_per_s": 1663.7035242362513,
+  "total_tok_per_s": 2891.923105601483,
+  "args": {
+    "engine": "nimbus",
+    "n": 256,
+    "batch": 16,
+    "max_num_seqs": 64,
+    "quant": null,
+    "eager": false,
+    "no_triton": false,
+    "seed": 1,
+    "tag": "s1"
+  },
+  "kv_blocks": 6224,
+  "steps": 1129,
+  "preemptions": 0,
+  "triton": true,
+  "cuda_graphs": true
+}
