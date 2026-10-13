@@ -31,7 +31,7 @@ def wikitext_ids():
     from datasets import load_dataset
     from transformers import AutoTokenizer
 
-    text = "\n\n".join(load_dataset("wikitext", "wikitext-2-raw-v1", split="test")["text"])
+    text = "\n\n".join(load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="test")["text"])
     return AutoTokenizer.from_pretrained(MODEL)(text).input_ids
 
 

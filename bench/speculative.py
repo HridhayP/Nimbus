@@ -40,6 +40,7 @@ def main():
     ap.add_argument("--draft", default="JackFram/llama-160m")
     ap.add_argument("--k", type=int, default=4)
     ap.add_argument("--reps", type=int, default=3)
+    ap.add_argument("--tag", default="")
     args = ap.parse_args()
 
     from nimbus.config import EngineConfig
@@ -64,6 +65,7 @@ def main():
         rates.append(n / (time.perf_counter() - t0))
         stats = None if args.plain else eng.stats
     name = "spec-plain" if args.plain else f"spec-{args.draft.split('/')[-1]}-k{args.k}"
+    name += f"-{args.tag}" if args.tag else ""
     data = {"benchmark": "speculative", "batch": 1, "prompts": len(ps), "output_tokens_each": OUT,
             "tok_per_s_median": statistics.median(rates), "tok_per_s_all": rates, "args": vars(args)}
     if stats is not None:

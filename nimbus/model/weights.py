@@ -18,13 +18,24 @@ def resolve_model_path(name_or_path: str) -> str:
         return name_or_path
     from huggingface_hub import snapshot_download
 
-    return snapshot_download(name_or_path, allow_patterns=["*.json", "*.safetensors", "*.model"])
+    path = snapshot_download(name_or_path, allow_patterns=["*.json", "*.safetensors", "*.model"])
+    if not glob.glob(os.path.join(path, "*.safetensors")):
+        # Older checkpoints (e.g. JackFram/llama-68m) ship only pytorch_model.bin.
+        path = snapshot_download(name_or_path, allow_patterns=["*.json", "*.bin", "*.model"])
+    return path
 
 
 def _read_tensors(path: str, device: str) -> dict[str, torch.Tensor]:
     files = sorted(glob.glob(os.path.join(path, "*.safetensors")))
     if not files:
-        raise FileNotFoundError(f"no .safetensors files in {path}")
+        bins = sorted(glob.glob(os.path.join(path, "pytorch_model*.bin")))
+        if not bins:
+            raise FileNotFoundError(f"no .safetensors or pytorch_model*.bin files in {path}")
+        out = {}
+        for f in bins:
+            # weights_only refuses to unpickle anything but tensors
+            out.update(torch.load(f, map_location=device, weights_only=True))
+        return out
     out = {}
     for f in files:
         with safe_open(f, framework="pt", device=device) as st:

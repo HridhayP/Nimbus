@@ -1,0 +1,26 @@
+{
+  "env": {
+    "time": "2026-10-12T19:22:40",
+    "python": "3.11.15",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "platform": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "triton": "3.6.0",
+    "transformers": "5.19.0",
+    "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "gpu_mem_gib": 6.0,
+    "driver": "610.88"
+  },
+  "benchmark": "quantization",
+  "mode": "hf",
+  "dataset": "wikitext-2-raw-v1 test",
+  "tokens": 341469,
+  "window": 2048,
+  "stride": 512,
+  "perplexity": 7.095151438853969,
+  "weight_bytes": 2200096768,
+  "weight_gib": 2.048999786376953,
+  "peak_cuda_alloc_gib": 2.667302131652832,
+  "eval_s": 263.56020570200053,
+  "scored_tokens": 341468
+}

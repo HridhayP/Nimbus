@@ -1,0 +1,178 @@
+{
+  "env": {
+    "time": "2026-10-12T19:14:48",
+    "python": "3.11.15",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "platform": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "triton": "3.6.0",
+    "transformers": "5.19.0",
+    "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "gpu_mem_gib": 6.0,
+    "driver": "610.88"
+  },
+  "benchmark": "kernels",
+  "rows": [
+    {
+      "kernel": "paged_decode_attention",
+      "shape": "batch=1 ctx=512",
+      "triton_us": 26.221114729882263,
+      "reference_us": 278.88749016726274,
+      "speedup": 10.635989088954915
+    },
+    {
+      "kernel": "paged_decode_attention",
+      "shape": "batch=1 ctx=2048",
+      "triton_us": 39.86640723006239,
+      "reference_us": 896.0620634483569,
+      "speedup": 22.476619432429214
+    },
+    {
+      "kernel": "paged_decode_attention",
+      "shape": "batch=16 ctx=512",
+      "triton_us": 98.29376094043255,
+      "reference_us": 3611.2320199608803,
+      "speedup": 36.73917841183572
+    },
+    {
+      "kernel": "paged_decode_attention",
+      "shape": "batch=64 ctx=512",
+      "triton_us": 348.26017559870434,
+      "reference_us": 14206.60348372026,
+      "speedup": 40.793075060326004
+    },
+    {
+      "kernel": "paged_decode_attention",
+      "shape": "batch=64 ctx=1024",
+      "triton_us": 626.6500773253264,
+      "reference_us": 28209.322929382324,
+      "speedup": 45.016068696242115
+    },
+    {
+      "kernel": "paged_prefill_attention",
+      "shape": "seqs=1 len=512",
+      "triton_us": 118.88640187680721,
+      "reference_us": 157.928247427203,
+      "speedup": 1.3283962247495036
+    },
+    {
+      "kernel": "paged_prefill_attention",
+      "shape": "seqs=4 len=512",
+      "triton_us": 383.41321201806653,
+      "reference_us": 615.1808016002178,
+      "speedup": 1.6044851411412249
+    },
+    {
+      "kernel": "paged_prefill_attention",
+      "shape": "seqs=16 len=128",
+      "triton_us": 203.359997831285,
+      "reference_us": 1897.285838018764,
+      "speedup": 9.329690491012016
+    },
+    {
+      "kernel": "add_rms_norm",
+      "shape": "rows=1 hidden=2048",
+      "triton_us": 10.013538542597626,
+      "reference_us": 39.6850185797495,
+      "speedup": 3.9631363489469087
+    },
+    {
+      "kernel": "add_rms_norm",
+      "shape": "rows=64 hidden=2048",
+      "triton_us": 15.487999941867132,
+      "reference_us": 63.31733274547492,
+      "speedup": 4.088154247361251
+    },
+    {
+      "kernel": "add_rms_norm",
+      "shape": "rows=2048 hidden=2048",
+      "triton_us": 272.9961729567984,
+      "reference_us": 920.4894640076328,
+      "speedup": 3.3718035459541045
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "qkv_proj M=1 N=2560 K=2048",
+      "triton_us": 65.57655430371219,
+      "reference_us": 117.04320229589939,
+      "speedup": 1.7848330632595277
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "qkv_proj M=16 N=2560 K=2048",
+      "triton_us": 65.41433642701347,
+      "reference_us": 118.62885109101883,
+      "speedup": 1.813499265919786
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "qkv_proj M=64 N=2560 K=2048",
+      "triton_us": 73.82938863322286,
+      "reference_us": 134.41292655588398,
+      "speedup": 1.820588373332389
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "qkv_proj M=512 N=2560 K=2048",
+      "triton_us": 358.58408755130984,
+      "reference_us": 345.89582449860046,
+      "speedup": 0.9646156550354628
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "gate_up_proj M=1 N=11264 K=2048",
+      "triton_us": 239.70223445641366,
+      "reference_us": 391.65672896937895,
+      "speedup": 1.6339302378951999
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "gate_up_proj M=16 N=11264 K=2048",
+      "triton_us": 239.9754926879355,
+      "reference_us": 470.4044135822647,
+      "speedup": 1.960218555292141
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "gate_up_proj M=64 N=11264 K=2048",
+      "triton_us": 264.8495131417324,
+      "reference_us": 479.82050838141606,
+      "speedup": 1.8116722311082496
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "gate_up_proj M=512 N=11264 K=2048",
+      "triton_us": 1540.4084254119357,
+      "reference_us": 1463.5690728823342,
+      "speedup": 0.9501175459300327
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "down_proj M=1 N=2048 K=5632",
+      "triton_us": 126.56226385422428,
+      "reference_us": 227.11241841316223,
+      "speedup": 1.7944718393687447
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "down_proj M=16 N=2048 K=5632",
+      "triton_us": 128.589577596597,
+      "reference_us": 245.33961885853816,
+      "speedup": 1.9079277142367006
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "down_proj M=64 N=2048 K=5632",
+      "triton_us": 163.83999905415945,
+      "reference_us": 250.99856963283133,
+      "speedup": 1.5319737004506482
+    },
+    {
+      "kernel": "int8_matmul vs fp16 cuBLAS",
+      "shape": "down_proj M=512 N=2048 K=5632",
+      "triton_us": 795.6479994455973,
+      "reference_us": 769.7687272901659,
+      "speedup": 0.967473968170015
+    }
+  ]
+}

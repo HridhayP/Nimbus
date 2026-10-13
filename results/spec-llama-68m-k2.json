@@ -1,0 +1,36 @@
+{
+  "env": {
+    "time": "2026-10-12T19:39:47",
+    "python": "3.11.15",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "platform": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "triton": "3.6.0",
+    "transformers": "5.19.0",
+    "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "gpu_mem_gib": 6.0,
+    "driver": "610.88"
+  },
+  "benchmark": "speculative",
+  "batch": 1,
+  "prompts": 8,
+  "output_tokens_each": 128,
+  "tok_per_s_median": 74.74726966156805,
+  "tok_per_s_all": [
+    74.74726966156805,
+    74.7181879806546,
+    74.80235964700998
+  ],
+  "args": {
+    "plain": false,
+    "draft": "JackFram/llama-68m",
+    "k": 2,
+    "reps": 3,
+    "tag": ""
+  },
+  "acceptance_rate": 0.2785388127853881,
+  "tokens_per_round": 1.5464231354642313,
+  "rounds": 657,
+  "draft_s": 2.141478948976328,
+  "verify_s": 11.201522775014382
+}

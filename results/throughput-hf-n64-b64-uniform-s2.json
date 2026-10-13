@@ -1,0 +1,37 @@
+{
+  "env": {
+    "time": "2026-10-12T19:33:38",
+    "python": "3.11.15",
+    "torch": "2.11.0+cu128",
+    "cuda": "12.8",
+    "platform": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "triton": "3.6.0",
+    "transformers": "5.19.0",
+    "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "gpu_mem_gib": 6.0,
+    "driver": "610.88"
+  },
+  "benchmark": "throughput",
+  "engine": "hf",
+  "requests": 64,
+  "seed": 2,
+  "workload": "uniform 100 in / 128 out",
+  "prompt_tokens": 6400,
+  "output_tokens": 8192,
+  "wall_s": 6.524715743000343,
+  "output_tok_per_s": 1255.5336236353753,
+  "total_tok_per_s": 2236.419267100512,
+  "args": {
+    "engine": "hf",
+    "n": 64,
+    "batch": 64,
+    "max_num_seqs": 64,
+    "quant": null,
+    "eager": false,
+    "no_triton": false,
+    "seed": 2,
+    "uniform": true,
+    "tag": "s2"
+  },
+  "batch_size": 64
+}

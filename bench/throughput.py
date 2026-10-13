@@ -80,17 +80,26 @@ def main():
     ap.add_argument("--eager", action="store_true")
     ap.add_argument("--no-triton", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--uniform", action="store_true",
+                    help="every request: 100-token prompt, 128 output tokens (no padding waste for HF)")
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
-    reqs = sharegpt_like(args.n, seed=args.seed)
+    if args.uniform:
+        import random
+
+        rng = random.Random(args.seed)
+        reqs = [([1] + [rng.randrange(100, 32000) for _ in range(99)], 128) for _ in range(args.n)]
+    else:
+        reqs = sharegpt_like(args.n, seed=args.seed)
     el, extra = run_nimbus(reqs, args) if args.engine == "nimbus" else run_hf(reqs, args)
     out_tokens = sum(o for _, o in reqs)
     in_tokens = sum(len(p) for p, _ in reqs)
     name = f"throughput-{args.engine}-n{args.n}" + (f"-b{args.batch}" if args.engine == "hf" else "")
-    name += (f"-{args.quant}" if args.quant else "") + ("-eager" if args.eager else "") + \
+    name += ("-uniform" if args.uniform else "") + (f"-{args.quant}" if args.quant else "") + ("-eager" if args.eager else "") + \
             ("-notriton" if args.no_triton else "") + (f"-{args.tag}" if args.tag else "")
     save(name, {
         "benchmark": "throughput", "engine": args.engine, "requests": args.n, "seed": args.seed,
+        "workload": "uniform 100 in / 128 out" if args.uniform else "sharegpt-like lognormal lengths",
         "prompt_tokens": in_tokens, "output_tokens": out_tokens, "wall_s": el,
         "output_tok_per_s": out_tokens / el, "total_tok_per_s": (in_tokens + out_tokens) / el,
         "args": vars(args), **extra,
