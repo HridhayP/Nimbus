@@ -1,6 +1,6 @@
-# Interview notes
+# FAQ
 
-Ten likely questions about Nimbus, answered from the code. Measured numbers are in RESULTS.md.
+Common questions about Nimbus, answered from the code. Measured numbers are in RESULTS.md.
 
 ### 1. What problem does a paged KV cache solve?
 
