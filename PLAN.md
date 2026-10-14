@@ -183,7 +183,7 @@ Every benchmark records GPU, driver, torch/triton versions, command and raw JSON
 - [x] **M6 INT8 weight-only:** quantizer plus Triton int8 matmul; perplexity and memory measured.
 - [x] **M7 Server:** OpenAI-compatible FastAPI with streaming, async engine; tested with the `openai` Python client.
 - [x] **M8 Benchmarks:** all of the above vs HF; RESULTS.md; Modal + Colab A100 scripts.
-- [x] **M9 Docs and ship:** README (Mermaid, quickstart, benchmark table, design decisions), INTERVIEW_NOTES.md, CI green, PR merged.
+- [x] **M9 Docs and ship:** README (Mermaid, quickstart, benchmark table, design decisions), FAQ.md, CI green, PR merged.
 
 ## Risks and how they're handled
 
